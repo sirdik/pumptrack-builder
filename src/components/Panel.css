@@ -1,0 +1,13 @@
+.panel { padding: 12px; border-bottom: 1px solid #2a3a2a; }
+.panel-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 8px; }
+.panel-empty { font-size: 11px; color: #555; }
+.ridability-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.ridability-icon { font-size: 28px; font-weight: 700; }
+.segment-list { display: flex; flex-direction: column; gap: 3px; }
+.segment-row { display: flex; justify-content: space-between; font-size: 11px; }
+.segment-id { color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+.segment-status.ok { color: #2ecc71; }
+.segment-status.warning { color: #f39c12; }
+.segment-status.fail { color: #e74c3c; }
+.warning-list { margin-top: 8px; }
+.warning-item { font-size: 11px; color: #e74c3c; padding: 2px 0; }
