@@ -32,11 +32,11 @@ function RollerMesh({ position, height, width }: { position: Point; height: numb
   )
 }
 
-function BermMesh({ position, radius, banking }: { position: Point; radius: number; banking: number }) {
+function BermMesh({ position, radius }: { position: Point; radius: number }) {
   return (
-    <mesh position={[position.x, 0.1, position.y]} rotation={[0, 0, (banking * Math.PI) / 180]}>
-      <torusGeometry args={[radius, 0.15, 8, 32, Math.PI]} />
-      <meshStandardMaterial color="#e74c3c" opacity={0.7} transparent />
+    <mesh position={[position.x, 0.15, position.y]} rotation={[Math.PI / 2, 0, 0]}>
+      <torusGeometry args={[radius, 0.2, 8, 32, Math.PI]} />
+      <meshStandardMaterial color="#e74c3c" opacity={0.8} transparent />
     </mesh>
   )
 }
@@ -61,7 +61,7 @@ export default function ThreeDView() {
             if (el.type === 'roller')
               return <RollerMesh key={el.id} position={el.position} height={el.heightM} width={el.widthM} />
             if (el.type === 'berm')
-              return <BermMesh key={el.id} position={el.position} radius={el.radiusM} banking={el.bankingDeg} />
+              return <BermMesh key={el.id} position={el.position} radius={el.radiusM} />
             return null
           })}
         </>
