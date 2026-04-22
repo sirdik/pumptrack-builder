@@ -10,7 +10,16 @@
       "Bash(npm install *)",
       "Bash(npm test *)",
       "Bash(git -C /c/webdev/pumptrack-builder add -A)",
-      "Bash(git -C /c/webdev/pumptrack-builder commit -m \"feat: scaffold Vite React TS project with Vitest\")"
+      "Bash(git -C /c/webdev/pumptrack-builder commit -m \"feat: scaffold Vite React TS project with Vitest\")",
+      "Bash(git -C /c/webdev/pumptrack-builder show HEAD --stat)",
+      "Bash(git -C /c/webdev/pumptrack-builder show d2deeda:LICENSE)",
+      "Bash(git -C /c/webdev/pumptrack-builder show d2deeda:README.md)",
+      "Bash(git *)",
+      "Bash(npm --prefix /c/webdev/pumptrack-builder test)",
+      "Bash(npm list *)",
+      "Bash(npm ls *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
