@@ -59,12 +59,13 @@ function placeElements(
     const segDist = distance(prev, curr)
     if (segDist >= p.rollerSpacingM) {
       const numRollers = Math.floor(segDist / p.rollerSpacingM)
+      const segAngle = angleBetween(prev, curr)
       for (let r = 0; r < numRollers; r++) {
         const t = (r + 0.5) / numRollers
         elements.push({
           type: 'roller', id: nextId('roller'),
           position: { x: prev.x + (curr.x - prev.x) * t, y: prev.y + (curr.y - prev.y) * t },
-          widthM: p.rollerWidthM, heightM: p.rollerHeightM,
+          widthM: p.rollerWidthM, heightM: p.rollerHeightM, directionRad: segAngle,
         })
         currentSpeed = Math.max(0.1, currentSpeed - 0.012 * 9.81 * p.rollerSpacingM / Math.max(currentSpeed, 0.1))
       }
@@ -106,17 +107,54 @@ function buildLoop(land: LandBoundary, p: ResolvedPreset): TrackPath {
 function buildSnake(land: LandBoundary, p: ResolvedPreset): TrackPath {
   const pts = land.unit === 'feet' ? toMeters(land.points) : land.points
   const bb = getBoundingBox(pts)
-  const laneHeight = p.bermRadiusM * 2 + p.trackWidthM
-  let nLanes = Math.max(2, Math.floor((bb.height - p.trackWidthM) / laneHeight))
-  if (nLanes % 2 !== 0) nLanes -= 1  // even lanes so last point matches first side
-  const xLeft  = bb.minX + p.bermRadiusM + p.trackWidthM / 2
-  const xRight = bb.maxX - p.bermRadiusM - p.trackWidthM / 2
-  const unique: Point[] = []
-  for (let i = 0; i < nLanes; i++) {
-    const y = bb.minY + p.trackWidthM / 2 + p.bermRadiusM + i * laneHeight
-    unique.push(i % 2 === 0 ? { x: xLeft, y } : { x: xRight, y })
-    unique.push(i % 2 === 0 ? { x: xRight, y } : { x: xLeft, y })
+
+  // Straights run along the longer axis; lanes stack along the shorter axis.
+  const horizontal = bb.width >= bb.height
+
+  // Lane pitch: track width + tight clearance between adjacent lane edges.
+  const lanePitch = p.trackWidthM + 0.6
+  // U-turn clearance at each end along the straight axis.
+  const turnClear = p.bermRadiusM
+
+  let nLanes: number
+  let unique: Point[]
+
+  if (horizontal) {
+    // Straights go left↔right; lanes stack in Y.
+    nLanes = Math.max(2, Math.floor(bb.height / lanePitch))
+    if (nLanes % 2 !== 0) nLanes -= 1
+    nLanes = Math.max(2, nLanes)
+
+    const xL = bb.minX + turnClear
+    const xR = bb.maxX - turnClear
+    const span = (nLanes - 1) * lanePitch
+    const y0  = bb.minY + (bb.height - span) / 2
+
+    unique = []
+    for (let i = 0; i < nLanes; i++) {
+      const y = y0 + i * lanePitch
+      unique.push(i % 2 === 0 ? { x: xL, y } : { x: xR, y })
+      unique.push(i % 2 === 0 ? { x: xR, y } : { x: xL, y })
+    }
+  } else {
+    // Straights go top↕bottom; lanes stack in X.
+    nLanes = Math.max(2, Math.floor(bb.width / lanePitch))
+    if (nLanes % 2 !== 0) nLanes -= 1
+    nLanes = Math.max(2, nLanes)
+
+    const yB = bb.minY + turnClear
+    const yT = bb.maxY - turnClear
+    const span = (nLanes - 1) * lanePitch
+    const x0  = bb.minX + (bb.width - span) / 2
+
+    unique = []
+    for (let i = 0; i < nLanes; i++) {
+      const x = x0 + i * lanePitch
+      unique.push(i % 2 === 0 ? { x, y: yB } : { x, y: yT })
+      unique.push(i % 2 === 0 ? { x, y: yT } : { x, y: yB })
+    }
   }
+
   const control = [...unique, unique[0]]
   return { control, centerline: catmullRomPath(unique, 10, true) }
 }
@@ -178,7 +216,7 @@ export function generateTrack(
     for (const el of elements) {
       if (failIds.has(el.id) && el.type !== 'roller') {
         const pos = el.type === 'berm' ? el.position : el.start
-        patched.push({ type: 'roller', id: nextId('roller-patch'), position: pos, widthM: p.rollerWidthM, heightM: p.rollerHeightM })
+        patched.push({ type: 'roller', id: nextId('roller-patch'), position: pos, widthM: p.rollerWidthM, heightM: p.rollerHeightM, directionRad: 0 })
       }
       patched.push(el)
     }

@@ -27,7 +27,7 @@ export interface TrackSettings {
 }
 
 export type TrackElement =
-  | { type: 'roller';   id: string; position: Point; widthM: number; heightM: number }
+  | { type: 'roller';   id: string; position: Point; widthM: number; heightM: number; directionRad: number }
   | { type: 'berm';     id: string; position: Point; radiusM: number; bankingDeg: number; sweepDeg: number; entrySpeedMs: number }
   | { type: 'straight'; id: string; start: Point; end: Point; widthM: number }
 
