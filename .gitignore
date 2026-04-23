@@ -25,3 +25,6 @@ dist-ssr
 
 # Superpowers brainstorm sessions
 .superpowers/
+
+#tmp resources
+resources
