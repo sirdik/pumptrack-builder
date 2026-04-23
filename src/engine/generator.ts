@@ -45,13 +45,17 @@ function placeElements(
 ): TrackElement[] {
   const elements: TrackElement[] = []
   let currentSpeed = settings.entrySpeedMs
+  const n = control.length
 
-  for (let i = 1; i < control.length - 1; i++) {
+  // control is a closed path: control[0] == control[n-1]
+  // Iterate every segment including the closing one (i from 1 to n-1 inclusive)
+  for (let i = 1; i < n; i++) {
     const prev = control[i - 1]
     const curr = control[i]
-    const next = control[i + 1]
+    // For the closing point (== control[0]), look at control[1] as "next"
+    const next = i < n - 1 ? control[i + 1] : control[1]
 
-    // Place rollers (or a straight marker) on the incoming segment prev→curr
+    // Rollers on the incoming segment prev→curr
     const segDist = distance(prev, curr)
     if (segDist >= p.rollerSpacingM) {
       const numRollers = Math.floor(segDist / p.rollerSpacingM)
@@ -68,7 +72,7 @@ function placeElements(
       elements.push({ type: 'straight', id: nextId('straight'), start: prev, end: curr, widthM: p.trackWidthM })
     }
 
-    // Check if curr is a sharp corner → place a berm
+    // Berm at curr if it's a sharp corner
     const a1 = angleBetween(prev, curr)
     const a2 = angleBetween(curr, next)
     let da = Math.abs(a2 - a1) * (180 / Math.PI)
@@ -96,23 +100,25 @@ function buildLoop(land: LandBoundary, p: ResolvedPreset): TrackPath {
   const pts = land.unit === 'feet' ? toMeters(land.points) : land.points
   const inset = insetPolygon(pts, p.trackWidthM / 2 + 0.5)
   const control = [...inset, inset[0]]
-  return { control, centerline: catmullRomPath(control, 10) }
+  return { control, centerline: catmullRomPath(inset, 10, true) }
 }
 
 function buildSnake(land: LandBoundary, p: ResolvedPreset): TrackPath {
   const pts = land.unit === 'feet' ? toMeters(land.points) : land.points
   const bb = getBoundingBox(pts)
   const laneHeight = p.bermRadiusM * 2 + p.trackWidthM
-  const nLanes = Math.max(2, Math.floor((bb.height - p.trackWidthM) / laneHeight))
+  let nLanes = Math.max(2, Math.floor((bb.height - p.trackWidthM) / laneHeight))
+  if (nLanes % 2 !== 0) nLanes -= 1  // even lanes so last point matches first side
   const xLeft  = bb.minX + p.bermRadiusM + p.trackWidthM / 2
   const xRight = bb.maxX - p.bermRadiusM - p.trackWidthM / 2
-  const control: Point[] = []
+  const unique: Point[] = []
   for (let i = 0; i < nLanes; i++) {
     const y = bb.minY + p.trackWidthM / 2 + p.bermRadiusM + i * laneHeight
-    control.push(i % 2 === 0 ? { x: xLeft, y } : { x: xRight, y })
-    control.push(i % 2 === 0 ? { x: xRight, y } : { x: xLeft, y })
+    unique.push(i % 2 === 0 ? { x: xLeft, y } : { x: xRight, y })
+    unique.push(i % 2 === 0 ? { x: xRight, y } : { x: xLeft, y })
   }
-  return { control, centerline: catmullRomPath(control, 10) }
+  const control = [...unique, unique[0]]
+  return { control, centerline: catmullRomPath(unique, 10, true) }
 }
 
 function buildFigure8(land: LandBoundary, p: ResolvedPreset): TrackPath {
@@ -133,19 +139,19 @@ function buildFigure8(land: LandBoundary, p: ResolvedPreset): TrackPath {
     const a = (i / steps) * 2 * Math.PI
     control.push({ x: cx + rx * Math.cos(a), y: cy + ry + ry * Math.sin(a) })
   }
-  return { control, centerline: catmullRomPath(control, 8) }
+  control.push(control[0])
+  return { control, centerline: catmullRomPath(control.slice(0, -1), 8, true) }
 }
 
 function buildHybrid(land: LandBoundary, p: ResolvedPreset): TrackPath {
-  const { control: outerCtrl, centerline: outerLine } = buildLoop(land, p)
+  const { control: outerCtrl } = buildLoop(land, p)
   const pts = land.unit === 'feet' ? toMeters(land.points) : land.points
   const centroid = polygonCentroid(pts)
   const mid = Math.floor(outerCtrl.length / 2)
-  const control = [...outerCtrl.slice(0, mid), centroid, ...outerCtrl.slice(mid)]
-  const centerline = [...outerLine.slice(0, Math.floor(outerLine.length / 2)),
-    ...catmullRomPath([outerLine[Math.floor(outerLine.length / 2)], centroid, outerLine[Math.floor(outerLine.length / 2)]], 4),
-    ...outerLine.slice(Math.floor(outerLine.length / 2))]
-  return { control, centerline }
+  // outerCtrl ends with duplicate first point — exclude it before inserting centroid
+  const unique = [...outerCtrl.slice(0, mid), centroid, ...outerCtrl.slice(mid, -1)]
+  const control = [...unique, unique[0]]
+  return { control, centerline: catmullRomPath(unique, 8, true) }
 }
 
 export function generateTrack(

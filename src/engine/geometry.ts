@@ -72,14 +72,16 @@ export function pointsToSVGPath(pts: Point[], closed: boolean): string {
   return parts.join(' ') + (closed ? ' Z' : '')
 }
 
-export function catmullRomPath(pts: Point[], segments: number): Point[] {
+export function catmullRomPath(pts: Point[], segments: number, closed = false): Point[] {
   if (pts.length < 2) return pts
   const result: Point[] = []
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[Math.max(0, i - 1)]
+  const n = pts.length
+  const count = closed ? n : n - 1
+  for (let i = 0; i < count; i++) {
+    const p0 = closed ? pts[(i - 1 + n) % n] : pts[Math.max(0, i - 1)]
     const p1 = pts[i]
-    const p2 = pts[i + 1]
-    const p3 = pts[Math.min(pts.length - 1, i + 2)]
+    const p2 = closed ? pts[(i + 1) % n] : pts[i + 1]
+    const p3 = closed ? pts[(i + 2) % n] : pts[Math.min(n - 1, i + 2)]
     for (let t = 0; t < segments; t++) {
       const s = t / segments
       const s2 = s * s, s3 = s2 * s
@@ -88,6 +90,6 @@ export function catmullRomPath(pts: Point[], segments: number): Point[] {
       result.push({ x, y })
     }
   }
-  result.push(pts[pts.length - 1])
+  if (!closed) result.push(pts[n - 1])
   return result
 }
